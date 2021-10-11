@@ -1,0 +1,11 @@
+O código calc.go deve estar em uma pasta própria. O caminho para esta pasta deve estar explícito no import do calc nos códigos do cliente e servidor.
+
+Se o Go não conseguir reconhecer qual package deve ser utiliado separem os programas em pastas distintas, lembrando de atualizar o caminho para a pasta em que o arquivo calc se encontra nos arquivos do cliente e do servidor.
+
+Serão necessário dois terminais para testar o programa da calculadora.
+
+Em um terminal, inicializem o servidor utilizando: go run server_v2.go
+
+Inicializem o cliente em outro terminal utilizando: go run <cliente de sua escolha>
+
+O client_v4.go irá reconhecer comandos no formato <Operação> <Número> <Número>. Exemplo: Mult 2 4
