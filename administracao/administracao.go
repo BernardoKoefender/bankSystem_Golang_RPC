@@ -12,10 +12,12 @@ import (
 	"fmt"
 )
 
+type Adm int
+
 // Account object
-//	acc_id: an identifier for the account
-//	name:	account's owner name
-//	cash:	ammount of cash in account
+//	Id: 	an identifier for the account
+//	Name:	account's owner name(not really used)
+//	Cash:	ammount of cash in account
 type Account struct
 {
 	Id 		int
@@ -23,8 +25,12 @@ type Account struct
 	Cash	float64
 }
 
-
 // Typeholder for transation's variables
+//	Id:		an identifier for an account
+//	Name:	account's owner name(not really used)
+//	Cash:	ammount of cash of the trasaction
+// 	Key:	a unique key for the transaction
+//	Msg:	extra field for testing purposes
 type Args struct
 {
 	Id 		int
@@ -34,8 +40,14 @@ type Args struct
 	Msg		string
 }
 
-type Adm int
-
+// An array of accounts.
+// Two accounts with the same Id can never exist
+// Two accounts with the same Name can exist
+// A new account can be added with CreateAcount
+// An existing account can be removed with RemoveAccount
+// An existing account can receive funds with AddFunds
+// An existing account can withdraw funds with WithdrawFunds
+// An existing account can have it's balance checked with CheckBalance
 var AccountList = []Account{
     {
     	Id: 12345,
@@ -48,11 +60,25 @@ var AccountList = []Account{
     },
 }
 
-var PendingKeys []int
-var ProcessedKeys []int
+// An identifier for a transaction.
+// Each transaction receives a unique key.
+// Two transactions cant have the same key.
+// Each time a transaction is created, NextKey is incremented by 1
 var NextKey int = 1000
 
-//Check if account exists.
+// List of transactions(keys) that have not been completed.
+var PendingKeys []int
+
+// List of transactions(keys) that have been completed.
+var ProcessedKeys []int
+
+
+
+//////////////////////////////////
+//// Administration functions ////
+//////////////////////////////////
+
+//Checks if account exists.
 //	reply = 1 if exists, else 0
 func (a *Adm) AccountExists(acc_id int, reply *int) error{
 	for i := 0; i < len(AccountList); i++{
@@ -68,32 +94,74 @@ func (a *Adm) AccountExists(acc_id int, reply *int) error{
 }
 
 //Create new account.
-//	reply = 1 if created
+//  reply = Key if successfull
+//	reply = 0 unused
+//	reply = 1 if key is already processed
+//	reply = 2 if key is not on pending list
+//	reply = 3 if failed to process key(this should never happen)
+//	reply = 4 unkown error
 func (a *Adm) CreateAccount(args *Args, reply *int) error {
-	acc := Account{
-		Id:		args.Id,
-		Name:	args.Name,
-		Cash:	args.Cash,
+	ret_val := EvaluateTransaction(args)
+	if ret_val == args.Key {
+		acc := Account{
+			Id:		args.Id,
+			Name:	args.Name,
+			Cash:	args.Cash,
+		}
+		fmt.Printf("%6d: CreateAccount: Account %d-%s created.\n", args.Key, args.Id, args.Name)
+		AccountList = append(AccountList, acc)
+		*reply = args.Key
+		return nil
+	} else if ret_val == 1 {
+		fmt.Printf("%6d: CreateAccount: This transaction is already processed. Aborting.\n", args.Key)
+		*reply = 1
+		return nil
+	} else if ret_val == 2{
+		fmt.Printf("%6d: CreateAccount: Key not found. Aborting.\n", args.Key)
+		*reply = 2
+		return nil
+	} else if ret_val == 3 {
+		fmt.Printf("%6d: CreateAccount: Failed to process key. Aborting.\n", args.Key)
+		*reply = 3
+		return nil
 	}
-	fmt.Printf("CreateAccount: Account %d-%s created.\n", args.Id, args.Name)
-	AccountList = append(AccountList, acc)
-	*reply = 1
+	*reply = 4
 	return nil
 }
 
 //Remove an account from AccountList.
-//	reply = 1 if removed, else 0
-func (a *Adm) RemoveAccount(acc_id int, reply *int) error {
-	for i := 0; i < len(AccountList); i++{
-		if AccountList[i].Id == acc_id{
-			AccountList[i] = AccountList[len(AccountList)-1]
-			AccountList = AccountList[:len(AccountList)-1]
-			fmt.Printf("RemoveAccount: Account %d deleted.\n", acc_id)
-			*reply = 1
-			return nil
+//  reply = Key if successfull
+//  reply = 0 if account not found
+//  reply = 1 if key is already processed
+//  reply = 2 if key is not on pending list
+//  reply = 3 if failed to process key(this should never happen)
+//  reply = 4 unkown error
+func (a *Adm) RemoveAccount(args *Args, reply *int) error {
+	ret_val := EvaluateTransaction(args)
+	if ret_val == args.Key {
+		for i := 0; i < len(AccountList); i++{
+			if AccountList[i].Id == args.Id{
+				AccountList[i] = AccountList[len(AccountList)-1]
+				AccountList = AccountList[:len(AccountList)-1]
+				fmt.Printf("%6d: RemoveAccount: Account %d deleted.\n", args.Key, args.Id)
+				*reply = args.Key
+				return nil
+			}
 		}
-	}
-	fmt.Printf("RemoveAccount: Error: account not found.\n", acc_id)
+    } else if ret_val == 1 {
+        fmt.Printf("%6d: RemoveAccount: This transaction is already processed. Aborting.\n", args.Key)
+        *reply = 1
+        return nil
+    } else if ret_val == 2{
+        fmt.Printf("%6d: RemoveAccount: Key not found. Aborting.\n", args.Key)
+        *reply = 2
+        return nil
+    } else if ret_val == 3 {
+        fmt.Printf("%6d: RemoveAccount: Failed to process key. Aborting.\n", args.Key)
+        *reply = 3
+        return nil
+    }
+	fmt.Printf("%6d: RemoveAccount: Error: account not found.\n", args.Key, args.Id)
 	*reply = 0
 	return nil
 }

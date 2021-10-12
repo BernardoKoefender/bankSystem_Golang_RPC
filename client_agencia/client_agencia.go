@@ -25,9 +25,9 @@ func main() {
     }
 
     //Variavel para receber os resultados
-    var reply int64
+    var reply int
     //Estrutura para enviar dados da conta
-    args := administracao.Args{Id: 1337, Name: "robocop", Cash: 0.0}
+    args := administracao.Args{Id: 0, Name: "null", Cash: 0.0}
 
     var quit bool = false;
     for quit == false{
@@ -55,30 +55,50 @@ func main() {
     		input = bufio.NewScanner(os.Stdin)
     		input.Scan()
     		args.Name = input.Text()
-
     		args.Cash = 0.0
 
-    		// Check if account exists
-    		err = c.Call("Adm.AccountExists", args.Id, &reply)
-    		if err != nil{
-    			log.Fatal("Adm: AccountExists error: ", err)
-    			continue
-    		}
-    		if reply == 0{
-    			//If it doesn't exists, create
+            // Check if account exists
+            err = c.Call("Adm.AccountExists", (&args).Id, &reply)
+            if err != nil{
+                log.Fatal("Adm: AccountExists error: ", err)
+                continue
+            }
+            if reply == 1{
+                fmt.Printf("Account %d already exsists. Aborting.\n", (&args).Id)
+                continue
+            }
+
+            // Get a new transaction key
+            err = c.Call("Adm.GetNewKey", &args, &reply)
+            if err != nil{
+                log.Fatal("Adm: GetNewKey error: ", err)
+                continue
+            }
+
+    		if reply >= 1000{
+    			args.Key = reply
     			err = c.Call("Adm.CreateAccount", args, &reply)
     			if err != nil {
         			log.Fatal("Adm: CreateAccount error: ", err)
-    			}
-    			if reply == 1 {
-    				fmt.Printf("Account %d-%s created.\n", args.Id, args.Name);
-    			}else{
-    				fmt.Printf("Account %d-%s not created, reply code: %d.\n", args.Id, args.Name, reply);
-    			}
-    		} else if reply == 1{
-    			fmt.Printf("Account %d already exists. Aborting.", args.Id)
-    			continue
-    		}
+    			} else {
+                    if reply == args.Key {
+                        fmt.Printf("%6d: Account %d-%s created.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 0 {
+                        fmt.Printf("%6d: Account %d-%s not created. Unused reply code %d.\n", args.Key, args.Id, args.Name, reply);
+                    } else if reply == 1 {
+                        fmt.Printf("%6d: Account %d-%s not created. Key already processed.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 2 {
+                        fmt.Printf("%6d: Account %d-%s not created. Key not on pending list.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 3 {
+                        fmt.Printf("%6d: Account %d-%s not created. Failed to process key.\n", args.Key, args.Id, args.Name);
+                    } else {
+                        fmt.Printf("%6d: Account %d-%s not created. Reply code %d unknown.\n", args.Key, args.Id, args.Name, reply);
+                    }
+                }
+            } else {
+                fmt.Printf("%6d: Invalid Key. Aborting.\n", args.Key)
+                continue
+            }
 
     	//////////// ACOUNT DELETION
     	} else if input.Text() == "2"{
@@ -91,27 +111,48 @@ func main() {
     		}
     		args.Id, err = strconv.Atoi(input.Text())
     		
-    		err = c.Call("Adm.AccountExists", args.Id, &reply)
-    		if err != nil{
-    			log.Fatal("Adm: AccountExists error: ", err)
-    			continue
-    		}
-    		if reply == 0{
-    			fmt.Printf("Account %d doesn't exsists. Aborting.\n", args.Id)
-    			continue
-    		} else if reply == 1{
-    		    err = c.Call("Adm.RemoveAccount", args.Id, &reply)
-    			if err != nil{
-	    			log.Fatal("Adm: RemoveAccount error: ", err)
-    				continue
-    			} else {
-    				if reply == 1 {
-    					fmt.Printf("Account %d removed.", args.Id)
-    				} else {
-    					fmt.Printf("Account %d not removed. Reply code: %d\n", args.Id, &reply)
-    				}
-    			}
-    		}
+            // Check if account exists
+            err = c.Call("Adm.AccountExists", (&args).Id, &reply)
+            if err != nil{
+                log.Fatal("Adm: AccountExists error: ", err)
+                continue
+            }
+            if reply == 0{
+                fmt.Printf("Account %d doesn't exsist. Aborting.\n", (&args).Id)
+                continue
+            }
+
+            // Get a new transaction key
+            err = c.Call("Adm.GetNewKey", &args, &reply)
+            if err != nil{
+                log.Fatal("Adm: GetNewKey error: ", err)
+                continue
+            }
+
+    		if reply >= 1000{
+                args.Key = reply
+                err = c.Call("Adm.RemoveAccount", args, &reply)
+                if err != nil {
+                    log.Fatal("Adm: RemoveAccount error: ", err)
+                } else {
+                    if reply == args.Key {
+                        fmt.Printf("%6d: Account %d-%s removed.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 0 {
+                        fmt.Printf("%6d: Account %d-%s not removed. Account not found.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 1 {
+                        fmt.Printf("%6d: Account %d-%s not removed. Key already processed.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 2 {
+                        fmt.Printf("%6d: Account %d-%s not removed. Key not on pending list.\n", args.Key, args.Id, args.Name);
+                    } else if reply == 3 {
+                        fmt.Printf("%6d: Account %d-%s not removed. Failed to process key.\n", args.Key, args.Id, args.Name);
+                    } else {
+                        fmt.Printf("%6d: Account %d-%s not removed. Reply code %d unknown.\n", args.Key, args.Id, args.Name, reply);
+                    }
+                }
+            } else {
+                fmt.Printf("%6d: Invalid Key. Aborting.\n", args.Key)
+                continue
+            }
 
 		//////////// ACOUNT AUTHENTICATION
     	} else if input.Text() == "3"{
@@ -152,29 +193,45 @@ func main() {
     		input.Scan()
     		args.Cash, err = strconv.ParseFloat(input.Text(), 64)
 
+            // Check if account exists
+            err = c.Call("Adm.AccountExists", (&args).Id, &reply)
+            if err != nil{
+                log.Fatal("Adm: AccountExists error: ", err)
+                continue
+            }
+            if reply == 0{
+                fmt.Printf("Account %d doesn't exsists. Aborting.\n", (&args).Id)
+                continue
+            }
 
-    		err = c.Call("Adm.AccountExists", args.Id, &reply)
-    		if err != nil{
-    			log.Fatal("Adm: AccountExists error: ", err)
-    			continue
-    		}
-    		if reply == 0{
-    			fmt.Printf("Account %d doesn't exsists. Aborting.\n", args.Id)
-    			continue
-    		} else if reply == 1{
-    			err = c.Call("Adm.AddFunds", args, &reply)
-    			if err != nil{
-	    			log.Fatal("Adm: AddFunds error: ", err)
-    				continue
-    			} else {
-    				if reply == 1 {
-    					fmt.Printf("Added $%.2f to account %d.", args.Cash, args.Id)
-    				} else {
-    					fmt.Printf("Deposit failed. Reply code: %d\n", &reply)
-    				}
-    			}
-    		}
-
+            // Get a new transaction key
+            err = c.Call("Adm.GetNewKey", &args, &reply)
+            if err != nil{
+                log.Fatal("Adm: GetNewKey error: ", err)
+                continue
+            }
+            // Process the transaction
+            if reply >= 1000{
+                args.Key = reply
+                err = c.Call("Adm.AddFunds", &args, &reply)
+                if err != nil{
+                    log.Fatal("Adm: AddFunds error: ", err)
+                    continue
+                } else {
+                    if reply == args.Key {
+                        fmt.Printf("%6d: Added $%.2f to account %d.\n", (&args).Key, (&args).Cash, (&args).Id)
+                    } else if reply == 0 {
+                        fmt.Printf("%6d: Deposit failed. Account doesn't exists.\n", (&args).Key)
+                    } else if reply == 1 {
+                        fmt.Printf("%6d: Deposit failed. Transaction already processed.\n", (&args).Key)
+                    } else {
+                        fmt.Printf("%6d: Deposit failed. Unknown Reply code: %d\n", (&args).Key, reply)
+                    }
+                }
+            } else {
+                fmt.Printf("Invalid Key %d. Aborting.\n", args.Key)
+                continue
+            }
     	} else if input.Text() == "5"{
     		fmt.Println("Withdraw Funds")
 			fmt.Println("Enter account ID or 0 to abort:")
@@ -190,28 +247,45 @@ func main() {
     		input.Scan()
     		args.Cash, err = strconv.ParseFloat(input.Text(), 64)
 
+            // Check if account exists
+            err = c.Call("Adm.AccountExists", (&args).Id, &reply)
+            if err != nil{
+                log.Fatal("Adm: AccountExists error: ", err)
+                continue
+            }
+            if reply == 0{
+                fmt.Printf("Account %d doesn't exsists. Aborting.\n", (&args).Id)
+                continue
+            }
 
-    		err = c.Call("Adm.AccountExists", args.Id, &reply)
-    		if err != nil{
-    			log.Fatal("Adm: AccountExists error: ", err)
-    			continue
-    		}
-    		if reply == 0{
-    			fmt.Printf("Account %d doesn't exsists. Aborting.\n", args.Id)
-    			continue
-    		} else if reply == 1{
-    			err = c.Call("Adm.WithdrawFunds", args, &reply)
-    			if err != nil{
-	    			log.Fatal("Adm: WithdrawFunds error: ", err)
-    				continue
-    			} else {
-    				if reply == 1 {
-    					fmt.Printf("Removed $%.2f from account %d.", args.Cash, args.Id)
-    				} else {
-    					fmt.Printf("Withdraw failed. Reply code: %d\n", &reply)
-    				}
-    			}
-    		}
+            // Get a new transaction key
+            err = c.Call("Adm.GetNewKey", &args, &reply)
+            if err != nil{
+                log.Fatal("Adm: GetNewKey error: ", err)
+                continue
+            }
+
+            if reply >= 1000{
+                args.Key = reply
+                err = c.Call("Adm.WithdrawFunds", &args, &reply)
+                if err != nil{
+                    log.Fatal("Adm: WithdrawFunds error: ", err)
+                    continue
+                } else {
+                    if reply == args.Key {
+                        fmt.Printf("%6d: Removed $%.2f from account %d.", (&args).Key, (&args).Cash, (&args).Id)
+                    } else if reply == 0 {
+                        fmt.Printf("%6d: Withdraw failed. Unused error code.\n", (&args).Key)
+                    } else if reply == 1 {
+                        fmt.Printf("%6d: Withdraw failed. Transaction already processed.\n", (&args).Key)
+                    } else {
+                        fmt.Printf("%6d: Withdraw failed. Unknown Reply code: %d\n", (&args).Key, reply)
+                    }
+                }
+            } else {
+                fmt.Printf("Invalid Key %d. Aborting.\n", args.Key)
+                continue
+            }
     	} else if input.Text() == "6"{
     		fmt.Println("Check Funds")
 			fmt.Println("Enter account ID or 0 to abort:")

@@ -27,7 +27,7 @@ func main() {
     //Variavel para receber os resultados
     var reply int
     //Estrutura para enviar dados da conta
-    args := administracao.Args{Id: 1337, Name: "robocop", Cash: 0.0, Key: 0, Msg: "0"}
+    args := administracao.Args{Id: 0, Name: "null", Cash: 0.0, Key: 0, Msg: "0"}
 
     var quit bool = false;
     for quit == false{
@@ -92,7 +92,7 @@ func main() {
     				}
     			}
     		} else {
-    			fmt.Printf("Invalid Key %d. Aborting.\n", args.Key)
+    			fmt.Printf("%6d: Invalid Key. Aborting.\n", args.Key)
     			continue
     		}
     	} else if input.Text() == "2"{
