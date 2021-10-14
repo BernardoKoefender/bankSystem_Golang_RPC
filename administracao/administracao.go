@@ -40,6 +40,14 @@ type Args struct
 	Msg		string
 }
 
+// Struct used only in CheckFunds.
+// This is necessary to return 2 arguments.
+type ReplyCheckFunds struct
+{
+	Cash	float64
+	Reply 	int
+}
+
 // An array of accounts.
 // Two accounts with the same Id can never exist
 // Two accounts with the same Name can exist
@@ -83,12 +91,12 @@ var ProcessedKeys []int
 func (a *Adm) AccountExists(acc_id int, reply *int) error{
 	for i := 0; i < len(AccountList); i++{
 		if AccountList[i].Id == acc_id{
-			//fmt.Printf("AccountExists: Account %d exists.\n", acc_id)
+			//fmt.Printf("        Athenticate:   Account %d exist.\n", acc_id)
 			*reply = 1
 			return nil
 		}
 	}
-	//fmt.Printf("AccountExists: Account %d doesn't exists.\n", acc_id)
+	//fmt.Printf("        Athenticate:   Account %d doesn't exist.\n", acc_id)
 	*reply = 0
 	return nil
 }
@@ -244,17 +252,17 @@ func (a *Adm) WithdrawFunds(args *Args, reply *int) error{
 
 //Check funds from account
 //  reply = 1 if sucessfull, 0 else
-func (a *Adm) CheckFunds(args *Args, reply *int) error{
+func (a *Adm) CheckFunds(args *Args, reply *ReplyCheckFunds) error{
 	for i := 0; i < len(AccountList); i++{
 		if AccountList[i].Id == args.Id{
-			(*args).Cash = AccountList[i].Cash
-			fmt.Printf("CheckFunds:    Checking funds of account %d. Is $%.2f\n", args.Id, args.Cash)
-			*reply = 1
+			(*reply).Cash = AccountList[i].Cash
+			fmt.Printf("        CheckFunds:    Checking funds of account %d. Is $%.2f\n", args.Id, (*reply).Cash)
+			(*reply).Reply = 1
 			return nil
 		}
 	}
-	fmt.Printf("CheckFunds:    Error: account not found.\n", args.Id, args.Cash)
-	*reply = 0
+	fmt.Printf("        CheckFunds:    Error: account %d not found.\n",args.Id)
+	(*reply).Reply = 0
 	return nil
 }
 

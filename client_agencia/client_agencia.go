@@ -26,6 +26,10 @@ func main() {
 
     //Variavel para receber os resultados
     var reply int
+
+    // Estrutura criada só pro retorno da função CheckFunds
+    replyCheckFunds := administracao.ReplyCheckFunds{Cash: 0.0, Reply: 0}
+
     //Estrutura para enviar dados da conta
     args := administracao.Args{Id: 0, Name: "null", Cash: 0.0}
 
@@ -305,15 +309,15 @@ func main() {
     			fmt.Printf("Account %d doesn't exsists. Aborting.\n", args.Id)
     			continue
     		} else if reply == 1{
-    			err = c.Call("Adm.CheckFunds", &args, &reply)
+    			err = c.Call("Adm.CheckFunds", &args, &replyCheckFunds)
     			if err != nil{
 	    			log.Fatal("Adm: CheckFunds error: ", err)
     				continue
     			} else {
-    				if reply == 1 {
-    					fmt.Printf("Checking funds of account %d. Total is: $%.2f", args.Id, args.Cash)
+    				if replyCheckFunds.Reply == 1 {
+    					fmt.Printf("Checking funds of account %d. Total is: $%.2f", args.Id, replyCheckFunds.Cash)
     				} else {
-    					fmt.Printf("Fund check failed. Reply code: %d\n", &reply)
+    					fmt.Printf("Fund check failed. Reply code: %d\n", replyCheckFunds.Reply)
     				}
     			}
     		}
